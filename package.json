@@ -1,0 +1,9 @@
+{
+  "name": "nohm",
+  "version": "1.0.0",
+  "description": "NEAR OHM ($NOHM) — the reserve currency of NEAR. OHM-style (3,3) staking, bonds and a treasury of real NEAR.",
+  "main": "server/index.js",
+  "scripts": { "start": "node server/index.js" },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEAR OHM Docs — the mechanism, with numbers</title>
+<meta name="description" content="How NEAR OHM works: the index and rebases, bonds and vesting, the treasury of real NEAR, backing and runway, deposits and withdrawals, parameters and the HTTP API.">
+<link rel="stylesheet" href="/client/src/base.css">
+<style>
+.wrap2{max-width:1240px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:240px 1fr;gap:56px}
+aside{position:sticky;top:84px;align-self:start}aside a{display:block;font-size:13.5px;color:var(--sub);padding:5px 0 5px 14px;border-left:1.5px solid var(--line2)}aside a:hover{color:var(--ink);border-color:var(--green)}
+h1{font-family:'Unbounded';font-weight:900;font-size:clamp(34px,5vw,60px);letter-spacing:-.03em;line-height:1;text-transform:uppercase;margin:10px 0 16px}
+h2{font-family:'Unbounded';font-weight:700;font-size:20px;letter-spacing:-.01em;margin:56px 0 14px;padding-top:22px;border-top:1.5px solid var(--ink)}
+h3{font-weight:600;font-size:15px;margin:20px 0 6px}
+p{color:var(--sub);margin:0 0 12px;max-width:760px}p b{color:var(--ink);font-weight:600}
+ul,ol{color:var(--sub);margin:0 0 12px 22px;max-width:740px}li{margin:4px 0}
+code{font-family:'IBM Plex Mono';font-size:12.5px;background:var(--paper2);border:1px solid var(--line2);padding:1px 6px;color:var(--ink)}
+pre{font-family:'IBM Plex Mono';font-size:12.5px;line-height:1.6;background:var(--ink);color:#fff;padding:16px 18px;overflow:auto;margin:10px 0 18px;max-width:760px;box-shadow:6px 6px 0 var(--green)}pre code{background:none;border:none;padding:0;color:inherit}.k{color:var(--green)}.m{color:#9a9a9a}
+table{border-collapse:collapse;width:100%;max-width:760px;font-size:13.5px;margin:10px 0 18px;border:1.5px solid var(--ink)}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:top}th{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);font-weight:500;background:var(--paper2)}td:first-child{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--ink);white-space:nowrap}td{color:var(--sub)}
+.callout{border:1.5px solid var(--ink);padding:14px 18px;margin:12px 0 18px;max-width:760px;box-shadow:6px 6px 0 var(--green)}.callout b{display:block;font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px}
+@media(max-width:860px){.wrap2{grid-template-columns:1fr;gap:20px}aside{position:static;display:flex;flex-wrap:wrap;gap:2px 14px}aside a{border:none;padding:2px 0}}
+</style>
+</head>
+<body>
+<header><div class="wrap hrow"><a class="logo" href="/"><span class="mk">N</span>NEAR OHM</a><nav class="tabs"><a href="/">Protocol</a><a href="/app">App</a><a class="on" href="/docs">Docs</a></nav><div class="hr"><a class="btn green sm" href="/app">Enter app →</a></div></div></header>
+<div class="wrap2">
+<aside><div class="lab" style="margin-bottom:8px">Contents</div><a href="#overview">Overview</a><a href="#index">The index and rebases</a><a href="#stake">Staking</a><a href="#bonds">Bonds</a><a href="#treasury">The treasury</a><a href="#backing">Backing and runway</a><a href="#deposits">NEAR deposits</a><a href="#withdrawals">Withdrawals</a><a href="#33">(3,3)</a><a href="#params">Parameters</a><a href="#api">HTTP API</a><a href="#token">$NOHM</a><a href="#risk">What can go wrong</a></aside>
+<main>
+<div class="lab">Documentation</div>
+<h1>The mechanism,<br>with <span class="gr">numbers.</span></h1>
+<p>NEAR OHM is the 2021 OlympusDAO design run on NEAR with NEAR as the reserve asset. Three parts: a token that rebases when staked, bonds that sell the token below market for NEAR, and a treasury that holds the NEAR. This page is the whole mechanism with every parameter named.</p>
+
+<h2 id="overview">Overview</h2>
+<ul><li><b>NOHM</b> is the protocol token. Fixed supply of 1,000,000,000 at launch.</li><li><b>sNOHM</b> is staked NOHM. Your sNOHM balance grows every epoch without any action.</li><li><b>Bonds</b> sell NOHM for NEAR below the market price, vesting linearly over 5 or 14 days.</li><li><b>The treasury</b> is a NEAR account. Bonds fill it. Its balance is read from the chain.</li></ul>
+
+<h2 id="index">The index and rebases</h2>
+<p>Time is divided into <b>epochs of 8 hours</b>. At the end of each epoch the protocol <b>rebases</b>: the index multiplies by <code>1 + r</code>, where <code>r</code> is the per-epoch rate. Staked balances are stored as shares (<code>agons</code>), and a balance is always <code>shares × index</code>, so every staker's balance rises at once, with nothing to claim.</p>
+<pre><code><span class="m">// per-epoch rate from the target APY</span>
+epochs_per_year = 31,557,600 / 28,800 = 1,095.75
+r = (1 + APY/100) ^ (1 / epochs_per_year) − 1
+
+<span class="m">// at APY 12,000%</span>
+r = 121 ^ (1/1095.75) − 1 ≈ 0.4388% per epoch
+
+<span class="m">// rebase</span>
+index ← index × (1 + r)
+your_sNOHM = your_shares × index</code></pre>
+<p>Between rebases the app shows a live index that interpolates linearly through the epoch, so the number on screen moves every second. The ledger only changes at the rebase.</p>
+
+<h2 id="stake">Staking</h2>
+<p><b>Stake</b> moves NOHM from your desk into shares: <code>shares = amount / index</code>. <b>Unstake</b> does the reverse at the current index. There is no lock and no fee. Your next reward is <code>staked × r</code> and lands at the next rebase. Bond payouts can be claimed straight into your stake with <b>Claim &amp; stake</b>.</p>
+
+<h2 id="bonds">Bonds</h2>
+<p>A bond is how NOHM enters circulation and how NEAR enters the treasury. You pay NEAR from your desk and receive NOHM at a discount to the market price, vesting linearly.</p>
+<table><tr><th>Market</th><th>Discount</th><th>Vesting</th><th>Minimum</th></tr><tr><td>NEAR</td><td>6.5%</td><td>5 days</td><td>0.5 NEAR</td></tr><tr><td>NEAR · 14 day</td><td>12%</td><td>14 days</td><td>0.5 NEAR</td></tr></table>
+<pre><code>bond_price  = nohm_price × (1 − discount)
+payout      = near_paid × near_usd / bond_price
+
+<span class="m">// 10 NEAR at $3.00, NOHM at $0.01, 6.5% bond</span>
+bond_price  = 0.01 × 0.935 = $0.00935
+payout      = 10 × 3.00 / 0.00935 = 3,208.6 NOHM, vesting over 5 days</code></pre>
+<p>Vested NOHM is claimable at any time: <code>claimable = payout × elapsed/vest − already_claimed</code>. <b>Claim</b> puts it on your desk; <b>Claim &amp; stake</b> puts it straight into sNOHM at the current index.</p>
+
+<h2 id="treasury">The treasury</h2>
+<p>The treasury is a single NEAR account. Every deposit is a NEAR transfer into it. Nothing leaves it except manual payouts of queued withdrawals. The <b>treasury</b> figure in the app is the larger of the on-chain balance (read with <code>view_account</code> every 30 seconds) and the sum of verified deposits, so a payout in flight never shows the treasury lower than the deposits behind it.</p>
+
+<h2 id="backing">Backing and runway</h2>
+<pre><code>backing_per_nohm = treasury_near × near_usd / 1,000,000,000
+rewards_per_day  = total_staked × ((1 + r) ^ 3 − 1) × nohm_price
+runway_days      = treasury_usd / rewards_per_day</code></pre>
+<p>Backing is what each NOHM would receive if the treasury were distributed today. Runway is how many days the treasury could fund the current emission at today's price. Both are shown on the dashboard and both move every time NEAR moves.</p>
+
+<h2 id="deposits">NEAR deposits</h2>
+<ol><li>Connect with your NEAR account id. The app checks the account exists on mainnet.</li><li>On <b>My desk</b>, copy the treasury account and send NEAR to it from any NEAR wallet (MyNearWallet, Meteor, HERE, Nightly, Sender, Ledger). Minimum <code>0.5 NEAR</code>.</li><li>Press <b>I sent it</b>. The server asks the NEAR indexer for transfers from your account to the treasury, then verifies each one directly against NEAR RPC: signed by your account, received by the treasury, final, and a plain <code>Transfer</code> action. Only then is the amount credited.</li></ol>
+<p>Every transaction hash is credited at most once. If the indexer is slow, paste the hash into <b>Credit my deposit</b> and the same RPC verification runs. The signer check is the guard: a hash that was not signed by your account is refused whoever pastes it.</p>
+
+<h2 id="withdrawals">Withdrawals</h2>
+<p>Queue a withdrawal from <b>My desk</b>. NEAR: minimum 0.5, leaves your desk immediately, paid by hand from a cold wallet normally within 24 hours, payout hash written next to the request. NOHM: opens when the NEP-141 token is live; until then NOHM lives on the ledger and earns as sNOHM.</p>
+
+<h2 id="33">(3,3)</h2>
+<table><tr><th></th><th>you stake</th><th>you bond</th><th>you sell</th></tr><tr><td>they stake</td><td>(3,3)</td><td>(1,3)</td><td>(−1,1)</td></tr><tr><td>they bond</td><td>(3,1)</td><td>(1,1)</td><td>(−1,1)</td></tr><tr><td>they sell</td><td>(1,−1)</td><td>(1,−1)</td><td>(−3,−3)</td></tr></table>
+<p>Staking compounds the index for everyone. Bonding deepens the treasury for everyone. Selling helps nobody. The best outcome for both players is that both stake.</p>
+
+<h2 id="params">Parameters</h2>
+<table><tr><th>Parameter</th><th>Value</th><th>Meaning</th></tr><tr><td>REBASE_SEC</td><td>28,800</td><td>Epoch length, 8 hours</td></tr><tr><td>APY_TARGET</td><td>12,000%</td><td>Displayed and emitted; sets r</td></tr><tr><td>TOTAL_SUPPLY</td><td>1,000,000,000</td><td>NOHM supply</td></tr><tr><td>TOKEN_PRICE</td><td>$0.01</td><td>NOHM price until a pool is read</td></tr><tr><td>Bond discounts</td><td>6.5% / 12%</td><td>5-day / 14-day markets</td></tr><tr><td>MIN_DEPOSIT</td><td>0.5 NEAR</td><td>Smallest credited transfer</td></tr><tr><td>MIN_BOND</td><td>0.5 NEAR</td><td>Per bond</td></tr><tr><td>MIN_WITHDRAW</td><td>0.5 NEAR</td><td>Per request</td></tr><tr><td>NEAR price</td><td>Yahoo NEAR-USD</td><td>Refreshed every minute</td></tr><tr><td>NOHM price</td><td>DexScreener (near)</td><td>Once NOHM_MINT is set</td></tr></table>
+
+<h2 id="api">HTTP API</h2>
+<table><tr><th>Route</th><th>Body</th><th>Returns</th></tr><tr><td>GET /api/metrics</td><td>—</td><td>Index, epoch, APY, treasury, backing, runway, bonds, leaderboard, tape</td></tr><tr><td>POST /api/resolve</td><td>wallet</td><td>Whether the account exists on NEAR mainnet</td></tr><tr><td>POST /api/account</td><td>wallet</td><td>Desk: NEAR, NOHM, staked, bonds, history, queue</td></tr><tr><td>POST /api/deposit/where</td><td>wallet</td><td>Treasury account and minimum</td></tr><tr><td>POST /api/deposit/scan</td><td>wallet</td><td>Finds and credits new transfers from you</td></tr><tr><td>POST /api/deposit</td><td>wallet, tx</td><td>Credits one verified transfer</td></tr><tr><td>POST /api/bond</td><td>wallet, market, amount</td><td>New bond and desk</td></tr><tr><td>POST /api/claim</td><td>wallet, autostake</td><td>Claimed NOHM</td></tr><tr><td>POST /api/stake · /api/unstake</td><td>wallet, amount</td><td>Desk</td></tr><tr><td>POST /api/withdraw</td><td>wallet, asset, amount</td><td>Queued item</td></tr></table>
+<pre><code>curl -X POST https://YOUR-DOMAIN/api/bond \
+  -H <span class="k">'content-type: application/json'</span> \
+  -d <span class="k">'{"wallet":"yourname.near","market":"near5","amount":10}'</span></code></pre>
+
+<h2 id="token">$NOHM</h2>
+<p>NOHM is a NEP-141 token on NEAR. Until the token contract is live the ledger is the source of truth for balances and staking; once it is live, NOHM withdrawals from the desk are paid on-chain and the pool price replaces the launch price everywhere. The contract id is shown at the top of the app once set.</p>
+
+<h2 id="risk">What can go wrong</h2>
+<ul><li><b>The rate comes down.</b> APY is a parameter. As staked supply grows it is lowered to protect runway. The number shown is current, not promised.</li><li><b>NEAR moves.</b> Backing and runway are priced in dollars through NEAR. A drop in NEAR lowers both.</li><li><b>Bond discounts are versus a price.</b> Before a pool exists the price is the launch price. After, it is the pool price and can move during your vest.</li><li><b>Withdrawals are manual.</b> Paid by a person from a cold wallet, normally within 24 hours, never instantly.</li></ul>
+<p style="margin-top:30px"><a href="/app" style="text-decoration:underline">→ Open the app</a></p>
+</main>
+</div>
+<footer class="wrap"><span>NEAR OHM · $NOHM · (3,3) on NEAR</span><span>@NearOHM</span></footer>
+</body>
+</html>
