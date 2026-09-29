@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>body{width:1280px;height:720px}.c{position:absolute;inset:0;display:grid;place-items:center;text-align:center;opacity:0}
+.h{font-family:'Unbounded';font-weight:900;font-size:74px;line-height:.98;text-transform:uppercase;letter-spacing:-.03em}
+#idx{font-family:'Unbounded';font-weight:900;font-size:230px;letter-spacing:-.05em;line-height:1;color:#00ec97;-webkit-text-stroke:3px #000}
+.sub{font-family:'IBM Plex Mono';font-size:20px;letter-spacing:.22em;text-transform:uppercase;color:#4b4f4b;margin-top:22px}
+#bar{position:absolute;left:0;bottom:0;height:10px;background:#00ec97}
+.pill{display:inline-block;padding:12px 26px;border:3px solid #000;font-family:'Unbounded';font-weight:700;font-size:22px;box-shadow:8px 8px 0 #00ec97}
+</style><body><div class="grid"></div>
+<div class="c" id="s1"><div><div class="h">Every chain got<br>its <span class="gr">OHM.</span></div></div></div>
+<div class="c" id="s2"><div><div class="h">Except <span class="gr">NEAR.</span><br>Until now.</div></div></div>
+<div class="c" id="s3"><div><div class="sub" style="margin:0 0 10px">index · rebase every 8 hours</div><div id="idx">1.0000</div><div class="sub">stake nohm · it just goes up</div></div></div>
+<div class="c" id="s4"><div><div class="h" style="font-size:64px">Bond <span class="gr">NEAR.</span><br>Stake <span class="gr">NOHM.</span><br>(3,3).</div></div></div>
+<div class="c" id="s5"><div><div style="display:flex;align-items:center;justify-content:center;gap:24px"><span class="mk" style="width:90px;height:90px;font-size:56px">N</span><span class="h" style="font-size:70px">NEAR OHM</span></div><div class="sub">the reserve currency of near · $nohm</div><div style="margin-top:34px"><span class="pill" id="dom">@NearOHM</span></div></div></div>
+<div id="bar"></div>
+<script>
+const $=(i)=>document.getElementById(i),cl=(x)=>Math.max(0,Math.min(1,x)),e=(x)=>1-Math.pow(1-cl(x),3),win=(t,a,b,f=.2)=>cl((t-a)/f)*cl((b-t)/f);
+const q=new URLSearchParams(location.search);if(q.get('dom'))$('dom').textContent=q.get('dom');
+window.__seek=(t)=>{
+  $('s1').style.opacity=win(t,0,1.9);$('s1').firstElementChild.style.transform=`translateY(${(1-e(t/.6))*30}px)`;
+  $('s2').style.opacity=win(t,1.8,3.6);$('s2').firstElementChild.style.transform=`scale(${.94+e((t-1.8)/.7)*.06})`;
+  $('s3').style.opacity=win(t,3.5,6.4);const p=e((t-3.6)/2.5);$('idx').textContent=(1+p*120).toFixed(p<.5?4:1);
+  $('s4').style.opacity=win(t,6.3,8.3);$('s4').firstElementChild.style.transform=`translateY(${(1-e((t-6.3)/.6))*30}px)`;
+  $('s5').style.opacity=e((t-8.2)/.5);$('s5').firstElementChild.style.transform=`scale(${.9+e((t-8.2)/.8)*.1})`;
+  $('bar').style.width=(t/10*1280)+'px';
+};window.__seek(0);
+</script>
